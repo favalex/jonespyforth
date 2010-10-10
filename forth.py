@@ -68,6 +68,10 @@ def define(name, flags, definition):
 def dup(frame):
     stack.push(stack.peek())
 
+def drop(frame):
+    stack.pop()
+define('DROP', 0, drop)
+
 def binary(operator):
     def word(frame):
         stack.push(operator(stack.pop(), stack.pop()))
