@@ -76,6 +76,7 @@ def binary(operator):
     def word(frame):
         stack.push(operator(stack.pop(), stack.pop()))
 
+    word.__name__ = operator.__name__
     return word
 
 def rspstore(frame):
