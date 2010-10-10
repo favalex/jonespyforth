@@ -37,7 +37,7 @@ class Frame(object):
     def next(self):
         instruction = self.get_current_instruction()
 
-        self.position +=1
+        self.position += 1
 
         return instruction
 
@@ -55,6 +55,20 @@ def binary(operator):
 
     return word
 
+def rspstore(frame):
+    global return_stack
+    return_stack = return_stack[:stack.pop()]
+
+def rspfetch(frame):
+    stack.push(len(return_stack))
+
+def rz(frame):
+    stack.push(0)
+
+def branch(frame):
+    n = frame.get_current_instruction()
+    frame.position += n
+
 words['DOUBLE'] = ['DUP', '+']
 words['DOUBLE2'] = ['LIT', 2, '*']
 
@@ -65,13 +79,62 @@ def lit(frame):
 def print_(frame):
     print stack.pop()
 
+def interpret(frame):
+    # execute(Frame(raw_input('> ').split()))
+    word(frame)
+    find(frame)
+
+def find(frame):
+    stack.push(words.get(stack.pop()))
+
+buffer = ''
+
+def key(frame):
+    global buffer
+
+    if not buffer:
+        buffer = raw_input('? ')
+
+    stack.push(buffer[0])
+    buffer = buffer[1:]
+
+def word(frame):
+    w = ''
+    while True:
+        key(frame)
+        k = stack.pop()
+        if k.isspace() or k == '\n':
+            stack.push(w)
+            break
+        w += k
+
 import operator
 
+words['R0'] = rz
+words['RSP!'] = rspstore
+words['BRANCH'] = branch
 words['LIT'] = lit
 words['DUP'] = dup
 words['*'] = binary(operator.mul)
 words['+'] = binary(operator.add)
 words['PRINT'] = print_
+words['INTERPRET'] = interpret
+words['QUIT'] = ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4]
+words['FIND'] = find
+words['KEY'] = key
+words['WORD'] = word
+
+def nop(frame):
+    pass
+
+words[':'] = nop
+words[';'] = nop
+
+def getenv(frame):
+    import os
+    stack.push(os.getenv(stack.pop()))
+
+words['GETENV'] = getenv
 
 def execute(frame):
     indent = 0
@@ -104,4 +167,5 @@ def execute(frame):
             indent += 2
             print ' '*indent, 'entering frame', id(frame)
 
-execute(Frame(['LIT', 10, 'DOUBLE', 'PRINT']))
+# execute(Frame(['LIT', 10, 'DOUBLE', 'PRINT']))
+execute(Frame(['QUIT']))
