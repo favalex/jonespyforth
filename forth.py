@@ -9,10 +9,18 @@ class Stack(list):
 
     def dump(self, indent=0):
         for n, value in enumerate(self):
-            print ' '*indent, '%d:' % n, value
+            print ' '*indent, '%d:' % n, repr(value)
 
 def inverse(s):
-    return '\033[7m' + s + '\033[27m'
+    return '\033[4m' + s + '\033[24m'
+
+def to_string(x):
+    if isinstance(x, list):
+        return '[' + ', '.join(map(to_string, x)) + ']'
+    elif callable(x):
+        return x.__name__
+    else:
+        return str(x)
 
 class Frame(object):
     def __init__(self, definition):
@@ -25,6 +33,8 @@ class Frame(object):
 
         print ' '*indent,
         for n, word in enumerate(self.definition):
+            word = to_string(word)
+
             if n == self.position:
                 print inverse(word),
             else:
