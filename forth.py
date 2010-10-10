@@ -103,23 +103,36 @@ def print_(frame):
     print stack.pop()
 
 def interpret(frame):
-    # execute(Frame(raw_input('> ').split()))
     word(frame)
     find(frame)
+    if not stack.peek() is None:
+        flags = stack.pop()
+        definition = stack.pop()
+        execute(Frame([definition]))
 
 def find(frame):
-    stack.push(words.get(stack.pop()))
+    flags_definition = words.get(stack.pop())
+    if flags_definition:
+        flags, definition = flags_definition
+        stack.push(definition)
+        stack.push(flags)
+    else:
+        stack.push(None)
 
-buffer = ''
+buffer = None
 
 def key(frame):
     global buffer
 
-    if not buffer:
+    if buffer is None:
         buffer = raw_input('? ')
 
-    stack.push(buffer[0])
-    buffer = buffer[1:]
+    if len(buffer) > 0:
+        stack.push(buffer[0])
+        buffer = buffer[1:]
+    else:
+        stack.push('\n')
+        buffer = None
 
 def word(frame):
     w = ''
