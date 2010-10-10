@@ -92,6 +92,7 @@ def defvar(name, value):
 defvar('STATE', 0)
 defvar('BASE', 10)
 defvar('HERE', [])
+defvar('LATEST', None)
 
 def dup(frame):
     stack.push(stack.peek())
@@ -125,11 +126,19 @@ define(']', 0, rbrac)
 def create(frame):
     vars['HERE'] = []
     vars['LATEST'] = stack.pop()
+    words[vars['LATEST']] = (0, [])
 define('CREATE', 0, create)
 
 def finish(frame):
-    words[vars['LATEST']] = (0, vars['HERE']) # FIXME flags
+    flags, definition = words[vars['LATEST']]
+    words[vars['LATEST']] = (flags, vars['HERE'])
 define('FINISH', 0, finish)
+
+def immediate(frame):
+    flags, definition = words[vars['LATEST']]
+    flags ^= IMMED
+    words[vars['LATEST']] = (flags, definition)
+define('IMMEDIATE', IMMED, immediate)
 
 def binary(operator):
     def word(frame):
