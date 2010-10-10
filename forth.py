@@ -104,8 +104,18 @@ def print_(frame):
 
 def interpret(frame):
     word(frame)
+    w = stack.peek()
     find(frame)
-    if not stack.peek() is None:
+    if stack.peek() is None:
+        stack.pop()
+        try:
+            n = int(w)
+        except ValueError:
+            print 'PARSE ERROR'
+            return
+        else:
+            execute(Frame([lit, n]))
+    else:
         flags = stack.pop()
         definition = stack.pop()
         execute(Frame([definition]))
