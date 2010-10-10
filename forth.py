@@ -62,6 +62,9 @@ def compile(definition):
     else:
         return [words[n][1] if isinstance(n, basestring) else n for n in definition]
 
+# flags
+IMMED = 0x80
+
 def define(name, flags, definition):
     words[name] = (flags, compile(definition))
 
@@ -88,6 +91,7 @@ def defvar(name, value):
 
 defvar('STATE', 0)
 defvar('BASE', 10)
+defvar('HERE', [])
 
 def dup(frame):
     stack.push(stack.peek())
@@ -104,6 +108,28 @@ def store(frame):
     var = stack.pop()
     var.store(stack.pop())
 define('!', 0, store)
+
+def comma(frame):
+    here = vars['HERE']
+    here.append(stack.pop())
+define(',', 0, comma)
+
+def lbrac(frame):
+    vars['STATE'] = 0
+define('[', IMMED, lbrac)
+
+def rbrac(frame):
+    vars['STATE'] = 1
+define(']', 0, rbrac)
+
+def create(frame):
+    vars['HERE'] = []
+    vars['LATEST'] = stack.pop()
+define('CREATE', 0, create)
+
+def finish(frame):
+    words[vars['LATEST']] = (0, vars['HERE']) # FIXME flags
+define('FINISH', 0, finish)
 
 def binary(operator):
     def word(frame):
@@ -150,8 +176,11 @@ def interpret(frame):
             execute(Frame([lit, n]))
     else:
         flags = stack.pop()
-        definition = stack.pop()
-        execute(Frame([definition]))
+        if flags & IMMED or vars['STATE'] == 0:
+            definition = stack.pop()
+            execute(Frame([definition]))
+        else:
+            comma(frame)
 
 def find(frame):
     flags_definition = words.get(stack.pop())
@@ -206,8 +235,8 @@ define('WORD', 0, word)
 def nop(frame):
     pass
 
-define(':', 0, nop)
-define(';', 0, nop)
+define(':', 0, ['WORD', 'CREATE', ']'])
+define(';', IMMED, ['FINISH', '['])
 
 def getenv(frame):
     import os
