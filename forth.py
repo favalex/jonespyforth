@@ -65,12 +65,45 @@ def compile(definition):
 def define(name, flags, definition):
     words[name] = (flags, compile(definition))
 
+class VarRef(object):
+    def __repr__(self):
+        return 'Variable ' + self.__name__
+
+    def __init__(self, name):
+        self.__name__ = name
+
+    def __call__(self, frame):
+        stack.push(self)
+
+    def store(self, value):
+        vars[self.__name__] = value
+
+    def fetch(self):
+        return vars[self.__name__]
+
+vars = {}
+def defvar(name, value):
+    vars[name] = value
+    define(name, 0, VarRef(name))
+
+defvar('STATE', 0)
+defvar('BASE', 10)
+
 def dup(frame):
     stack.push(stack.peek())
 
 def drop(frame):
     stack.pop()
 define('DROP', 0, drop)
+
+def fetch(frame):
+    stack.push(stack.pop().fetch())
+define('@', 0, fetch)
+
+def store(frame):
+    var = stack.pop()
+    var.store(stack.pop())
+define('!', 0, store)
 
 def binary(operator):
     def word(frame):
