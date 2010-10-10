@@ -81,7 +81,9 @@ def binary(operator):
 
 def rspstore(frame):
     global return_stack
-    return_stack = return_stack[:stack.pop()]
+    old_stack = return_stack
+    return_stack = Stack()
+    return_stack.extend(old_stack[:stack.pop()])
 
 def rspfetch(frame):
     stack.push(len(return_stack))
