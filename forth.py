@@ -51,10 +51,19 @@ class Frame(object):
 
         return instruction
 
-words = {}
-
 stack = Stack()
 return_stack = Stack()
+
+words = {}
+
+def compile(definition):
+    if callable(definition):
+        return definition
+    else:
+        return [words[n][1] if isinstance(n, basestring) else n for n in definition]
+
+def define(name, flags, definition):
+    words[name] = (flags, compile(definition))
 
 def dup(frame):
     stack.push(stack.peek())
@@ -78,9 +87,6 @@ def rz(frame):
 def branch(frame):
     n = frame.get_current_instruction()
     frame.position += n
-
-words['DOUBLE'] = ['DUP', '+']
-words['DOUBLE2'] = ['LIT', 2, '*']
 
 def lit(frame):
     stack.push(frame.get_current_instruction())
@@ -120,31 +126,35 @@ def word(frame):
 
 import operator
 
-words['R0'] = rz
-words['RSP!'] = rspstore
-words['BRANCH'] = branch
-words['LIT'] = lit
-words['DUP'] = dup
-words['*'] = binary(operator.mul)
-words['+'] = binary(operator.add)
-words['PRINT'] = print_
-words['INTERPRET'] = interpret
-words['QUIT'] = ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4]
-words['FIND'] = find
-words['KEY'] = key
-words['WORD'] = word
+define('R0', 0, rz)
+define('RSP!', 0, rspstore)
+define('BRANCH', 0, branch)
+define('LIT', 0, lit)
+define('DUP', 0, dup)
+define('*', 0, binary(operator.mul))
+define('+', 0, binary(operator.add))
+define('PRINT', 0, print_)
+define('INTERPRET', 0, interpret)
+define('QUIT', 0, ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4])
+define('FIND', 0, find)
+define('KEY', 0, key)
+define('WORD', 0, word)
 
 def nop(frame):
     pass
 
-words[':'] = nop
-words[';'] = nop
+define(':', 0, nop)
+define(';', 0, nop)
 
 def getenv(frame):
     import os
     stack.push(os.getenv(stack.pop()))
+define('GETENV', 0, getenv)
 
-words['GETENV'] = getenv
+def random_(frame):
+    import random
+    stack.push(random.randint(0, 1000))
+define('RANDOM', 0, random_)
 
 def execute(frame):
     indent = 0
@@ -166,16 +176,18 @@ def execute(frame):
 
             continue
 
-        definition = words[instruction]
-
-        if callable(definition):
-            definition(frame)
+        if callable(instruction):
+            instruction(frame)
             stack.dump(indent)
         else:
             return_stack.push(frame)
-            frame = Frame(definition)
+            frame = Frame(instruction)
             indent += 2
             print ' '*indent, 'entering frame', id(frame)
 
-# execute(Frame(['LIT', 10, 'DOUBLE', 'PRINT']))
-execute(Frame(['QUIT']))
+define('DOUBLE', 0, ['DUP', '+'])
+define('DOUBLE2', 0, ['LIT', 2, '*'])
+
+# execute(Frame(compile(['LIT', 10, 'DOUBLE', 'PRINT'])))
+import sys
+execute(Frame(compile(sys.argv[1:] if len(sys.argv) > 1 else ['QUIT'])))
