@@ -246,6 +246,7 @@ def nop(frame):
 
 define(':', 0, ['WORD', 'CREATE', ']'])
 define(';', IMMED, ['FINISH', '['])
+define('\'', 0, ['WORD', 'FIND', 'DROP'])
 
 def getenv(frame):
     import os
