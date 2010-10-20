@@ -68,12 +68,12 @@ IMMED = 0x80
 def define(name, flags, definition):
     words[name] = (flags, compile(definition))
 
-class VarRef(object):
-    def __repr__(self):
-        return 'Variable ' + self.__name__
-
+class Var(object):
     def __init__(self, name):
         self.__name__ = name
+
+    def __repr__(self):
+        return 'Variable ' + self.__name__
 
     def __call__(self, frame):
         stack.push(self)
@@ -84,14 +84,40 @@ class VarRef(object):
     def fetch(self):
         return vars[self.__name__]
 
+class Ref(object):
+    def __init__(self, memory):
+        self.memory = memory
+        self.address = 0
+        self.__name__ = 'Ref'
+
+    def __repr__(self):
+        return 'Ref at address %s' % self.address
+
+    def __call__(self, frame):
+        stack.push(self)
+
+    def store(self, value):
+        self.memory[self.address] = value
+
+    def fetch(self):
+        return self.memory[self.address]
+
+    def copy(self):
+        return self.memory[:self.address]
+
 vars = {}
 def defvar(name, value):
-    vars[name] = value
-    define(name, 0, VarRef(name))
+    if isinstance(value, list):
+        ref = Ref(value)
+        vars[name] = ref
+        define(name, 0, ref)
+    else:
+        vars[name] = value
+        define(name, 0, Var(name))
 
 defvar('STATE', 0)
 defvar('BASE', 10)
-defvar('HERE', [])
+defvar('HERE', [None]*100)
 defvar('LATEST', None)
 
 def dup(frame):
@@ -112,7 +138,8 @@ define('!', 0, store)
 
 def comma(frame):
     here = vars['HERE']
-    here.append(stack.pop())
+    here.store(stack.pop())
+    here.address += 1
 define(',', 0, comma)
 
 def lbrac(frame):
@@ -124,14 +151,14 @@ def rbrac(frame):
 define(']', 0, rbrac)
 
 def create(frame):
-    vars['HERE'] = []
+    vars['HERE'].address = 0
     vars['LATEST'] = stack.pop()
     words[vars['LATEST']] = (0, [])
 define('CREATE', 0, create)
 
 def finish(frame):
     flags, definition = words[vars['LATEST']]
-    words[vars['LATEST']] = (flags, vars['HERE'])
+    words[vars['LATEST']] = (flags, vars['HERE'].copy())
 define('FINISH', 0, finish)
 
 def immediate(frame):
