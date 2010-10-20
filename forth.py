@@ -209,7 +209,13 @@ def interpret(frame):
             print 'PARSE ERROR'
             return
         else:
-            execute(Frame([lit, n]))
+            if vars['STATE'] == 0:
+                execute(Frame([lit, n]))
+            else:
+                stack.push(lit)
+                comma(frame)
+                stack.push(n)
+                comma(frame)
     else:
         flags = stack.pop()
         if flags & IMMED or vars['STATE'] == 0:
