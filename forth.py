@@ -204,7 +204,7 @@ def interpret(frame):
     if stack.peek() is None:
         stack.pop()
         try:
-            n = int(w)
+            n = int(w, vars['BASE'])
         except ValueError:
             print 'PARSE ERROR'
             return
