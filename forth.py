@@ -264,10 +264,18 @@ import operator
 define('R0', 0, rz)
 define('RSP!', 0, rspstore)
 define('BRANCH', 0, branch)
+
+def zbranch(frame):
+    n = frame.get_current_instruction()
+    if stack.pop() == 0:
+        frame.position += n
+define('0BRANCH', 0, zbranch)
+
 define('LIT', 0, lit)
 define('DUP', 0, dup)
 define('*', 0, binary(operator.mul))
 define('+', 0, binary(operator.add))
+define('-', 0, binary(operator.sub))
 define('PRINT', 0, print_)
 define('INTERPRET', 0, interpret)
 define('QUIT', 0, ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4])
