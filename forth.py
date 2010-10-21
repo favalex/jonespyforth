@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+DEBUG = False
+
 class Stack(list):
     def push(self, x):
         self.append(x)
@@ -300,15 +302,18 @@ define('RANDOM', 0, random_)
 
 def execute(frame):
     indent = 0
-    print 'entering frame', id(frame)
+    if DEBUG:
+        print 'entering frame', id(frame)
 
     while True:
-        frame.dump(indent)
+        if DEBUG:
+            frame.dump(indent)
 
         try:
             instruction = frame.next()
         except IndexError:
-            print ' '*indent, 'exiting frame', id(frame)
+            if DEBUG:
+                print ' '*indent, 'exiting frame', id(frame)
             indent -= 2
             try:
                 frame = return_stack.pop()
@@ -320,12 +325,14 @@ def execute(frame):
 
         if callable(instruction):
             instruction(frame)
-            stack.dump(indent)
+            if DEBUG:
+                stack.dump(indent)
         elif isinstance(instruction, list):
             return_stack.push(frame)
             frame = Frame(instruction)
             indent += 2
-            print ' '*indent, 'entering frame', id(frame)
+            if DEBUG:
+                print ' '*indent, 'entering frame', id(frame)
         else: # unquoted literal
             stack.push(instruction)
 
