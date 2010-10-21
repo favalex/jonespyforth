@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+import sys
+
 DEBUG = False
 
 class Stack(list):
@@ -125,6 +127,12 @@ defvar('LATEST', None)
 def dup(frame):
     stack.push(stack.peek())
 
+def swap(frame):
+    a = stack.pop()
+    b = stack.pop()
+    stack.push(a)
+    stack.push(b)
+
 def drop(frame):
     stack.pop()
 define('DROP', 0, drop)
@@ -169,6 +177,12 @@ def immediate(frame):
     words[vars['LATEST']] = (flags, definition)
 define('IMMEDIATE', IMMED, immediate)
 
+def divmod_(frame):
+    x = stack.pop()
+    div, mod = divmod(stack.pop(), x)
+    stack.push(mod)
+    stack.push(div)
+
 def binary(operator):
     def word(frame):
         x = stack.pop()
@@ -199,6 +213,20 @@ def lit(frame):
 
 def print_(frame):
     print stack.pop()
+
+def emit(frame):
+    sys.stdout.write(stack.pop())
+    sys.stdout.flush()
+define('EMIT', 0, emit)
+
+def zequ(frame):
+    stack.push(1 if stack.pop() == 0 else 0)
+define('0=', 0, zequ)
+
+def char(frame):
+    word(frame)
+    stack.push(stack.pop()[0])
+define('CHAR', 0, char)
 
 def interpret(frame):
     word(frame)
@@ -273,6 +301,8 @@ define('0BRANCH', 0, zbranch)
 
 define('LIT', 0, lit)
 define('DUP', 0, dup)
+define('SWAP', 0, swap)
+define('/MOD', 0, divmod_)
 define('*', 0, binary(operator.mul))
 define('+', 0, binary(operator.add))
 define('-', 0, binary(operator.sub))
