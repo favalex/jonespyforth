@@ -169,7 +169,8 @@ define('IMMEDIATE', IMMED, immediate)
 
 def binary(operator):
     def word(frame):
-        stack.push(operator(stack.pop(), stack.pop()))
+        x = stack.pop()
+        stack.push(operator(stack.pop(), x))
 
     word.__name__ = operator.__name__
     return word
