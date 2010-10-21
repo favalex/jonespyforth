@@ -213,8 +213,6 @@ def interpret(frame):
             if vars['STATE'] == 0:
                 execute(Frame([lit, n]))
             else:
-                stack.push(lit)
-                comma(frame)
                 stack.push(n)
                 comma(frame)
     else:
@@ -323,11 +321,13 @@ def execute(frame):
         if callable(instruction):
             instruction(frame)
             stack.dump(indent)
-        else:
+        elif isinstance(instruction, list):
             return_stack.push(frame)
             frame = Frame(instruction)
             indent += 2
             print ' '*indent, 'entering frame', id(frame)
+        else: # unquoted literal
+            stack.push(instruction)
 
 define('DOUBLE', 0, ['DUP', '+'])
 define('DOUBLE2', 0, ['LIT', 2, '*'])
