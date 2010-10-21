@@ -237,7 +237,9 @@ def interpret(frame):
         try:
             n = int(w, vars['BASE'])
         except ValueError:
-            print 'PARSE ERROR'
+            print line, 'PARSE ERROR', repr(w)
+            # import pprint; pprint.pprint(words)
+            import sys; sys.exit(1)
             return
         else:
             if vars['STATE'] == 0:
@@ -277,14 +279,36 @@ def key(frame):
         stack.push('\n')
         buffer = None
 
+line = 1
+
 def word(frame):
+    global line
     w = ''
+    inside_comment = False
     while True:
         key(frame)
         k = stack.pop()
+
+        if inside_comment:
+            if k == '\n':
+                line += 1
+                inside_comment = False
+            continue
+
+        if w == '' and k == '\\':
+            inside_comment = True
+            continue
+
         if k.isspace() or k == '\n':
-            stack.push(w)
-            break
+            if k == '\n':
+                line += 1
+
+            if w != '':
+                stack.push(w)
+                break
+            else:
+                continue
+
         w += k
 
 import operator
