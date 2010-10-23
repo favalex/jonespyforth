@@ -289,13 +289,14 @@ def find(frame):
 buffer = None
 
 def key(frame):
-    global buffer, input_stream
+    global buffer, input_stream, line
 
     if buffer is None:
         if input_stream.isatty():
             sys.stdout.write('? ')
             sys.stdout.flush()
         buffer = input_stream.readline()
+        line += 1
 
         if buffer == '': # EOF
             if input_stream == sys.stdin:
@@ -312,10 +313,9 @@ def key(frame):
         stack.push('\n')
         buffer = None
 
-line = 1
+line = 0
 
 def word(frame):
-    global line
     w = ''
     inside_comment = False
     while True:
@@ -324,7 +324,6 @@ def word(frame):
 
         if inside_comment:
             if k == '\n':
-                line += 1
                 inside_comment = False
             continue
 
@@ -333,9 +332,6 @@ def word(frame):
             continue
 
         if k.isspace() or k == '\n':
-            if k == '\n':
-                line += 1
-
             if w != '':
                 stack.push(w)
                 break
