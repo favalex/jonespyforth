@@ -304,7 +304,6 @@ def key(frame):
                 sys.exit(0)
 
             input_stream = sys.stdin
-            execute(Frame(['QUIT']))
 
     if len(buffer) > 0:
         stack.push(buffer[0])
