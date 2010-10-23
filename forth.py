@@ -2,8 +2,6 @@
 
 import sys
 
-DEBUG = False
-
 class Stack(list):
     def push(self, x):
         self.append(x)
@@ -124,6 +122,7 @@ defvar('STATE', 0)
 defvar('BASE', 10)
 defvar('HERE', [None]*100)
 defvar('LATEST', None)
+defvar('DEBUG', False)
 
 def dup(frame):
     stack.push(stack.peek())
@@ -373,36 +372,37 @@ define('PDB', 0, pdb_)
 
 def execute(frame):
     indent = 0
-    if DEBUG:
+    if vars['DEBUG']:
         print 'entering frame', id(frame)
 
     while True:
-        if DEBUG:
+        if vars['DEBUG']:
             frame.dump(indent)
 
         try:
             instruction = frame.next()
         except IndexError:
-            if DEBUG:
+            if vars['DEBUG']:
                 print ' '*indent, 'exiting frame', id(frame)
             indent -= 2
             try:
                 frame = return_stack.pop()
             except IndexError:
-                stack.dump(indent)
+                if vars['DEBUG']:
+                    stack.dump(indent)
                 return
 
             continue
 
         if callable(instruction):
             instruction(frame)
-            if DEBUG:
+            if vars['DEBUG']:
                 stack.dump(indent)
         elif isinstance(instruction, list):
             return_stack.push(frame)
             frame = Frame(instruction)
             indent += 2
-            if DEBUG:
+            if vars['DEBUG']:
                 print ' '*indent, 'entering frame', id(frame)
         else: # unquoted literal
             stack.push(instruction)
