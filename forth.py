@@ -355,6 +355,11 @@ def random_(frame):
     stack.push(random.randint(0, 1000))
 define('RANDOM', 0, random_)
 
+def pdb_(frame):
+    import pdb
+    pdb.set_trace()
+define('PDB', 0, pdb_)
+
 def execute(frame):
     indent = 0
     if DEBUG:
