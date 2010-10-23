@@ -9,6 +9,10 @@ class Stack(list):
     def peek(self):
         return self[-1]
 
+    def set_top(self, top):
+        for i in range(len(self)-1, top-1, -1):
+            del self[i]
+
     def dump(self, indent=0):
         top = len(self) - 1
         for n, value in enumerate(self):
@@ -122,7 +126,17 @@ defvar('STATE', 0)
 defvar('BASE', 10)
 defvar('HERE', [None]*100)
 defvar('LATEST', None)
+defvar('S0', 0)
 defvar('DEBUG', False)
+
+def dspfetch(frame):
+    stack.push(len(stack)-1)
+define('DSP@', 0, dspfetch)
+
+def dspstore(frame):
+    stack.set_top(stack.pop())
+
+define('DSP!', 0, dspstore)
 
 def dup(frame):
     stack.push(stack.peek())
