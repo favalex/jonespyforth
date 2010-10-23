@@ -12,8 +12,9 @@ class Stack(list):
         return self[-1]
 
     def dump(self, indent=0):
+        top = len(self) - 1
         for n, value in enumerate(self):
-            print ' '*indent, '%d:' % n, repr(value)
+            print ' '*indent, '%d:' % (top-n), repr(value)
 
 def inverse(s):
     return '\033[4m' + s + '\033[24m'
