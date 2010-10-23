@@ -205,6 +205,14 @@ def binary(operator):
     word.__name__ = operator.__name__
     return word
 
+def boolean(operator):
+    def word(frame):
+        x = stack.pop()
+        stack.push(1 if operator(stack.pop(), x) else 0)
+
+    word.__name__ = operator.__name__
+    return word
+
 def rspstore(frame):
     global return_stack
     old_stack = return_stack
@@ -355,6 +363,12 @@ define('/MOD', 0, divmod_)
 define('*', 0, binary(operator.mul))
 define('+', 0, binary(operator.add))
 define('-', 0, binary(operator.sub))
+define('=', 0, boolean(operator.eq))
+define('<>', 0, boolean(operator.ne))
+define('<', 0, boolean(operator.lt))
+define('>', 0, boolean(operator.gt))
+define('>=', 0, boolean(operator.ge))
+define('<=', 0, boolean(operator.le))
 define('PRINT', 0, print_)
 define('INTERPRET', 0, interpret)
 define('QUIT', 0, ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4])
@@ -362,12 +376,21 @@ define('FIND', 0, find)
 define('KEY', 0, key)
 define('WORD', 0, word)
 
+def incr(frame):
+    stack.push(1 + stack.pop())
+define('1+', 0, incr)
+
 def nop(frame):
     pass
 
 define(':', 0, ['WORD', 'CREATE', ']'])
 define(';', IMMED, ['FINISH', '['])
-define('\'', 0, ['WORD', 'FIND', 'DROP'])
+def tick(frame):
+    stack.push(frame.get_current_instruction())
+    frame.next()
+define('\'', 0, tick)
+define('\'\'', 0, ['WORD', 'FIND', 'DROP'])
+define('>CFA', 0, nop)
 
 def getenv(frame):
     import os
