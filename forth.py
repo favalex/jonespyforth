@@ -268,10 +268,21 @@ def find(frame):
 buffer = None
 
 def key(frame):
-    global buffer
+    global buffer, input_stream
 
     if buffer is None:
-        buffer = raw_input('? ')
+        if input_stream.isatty():
+            sys.stdout.write('? ')
+            sys.stdout.flush()
+        buffer = input_stream.readline()
+
+        if buffer == '': # EOF
+            if input_stream == sys.stdin:
+                print 'bye'
+                sys.exit(0)
+
+            input_stream = sys.stdin
+            execute(Frame(['QUIT']))
 
     if len(buffer) > 0:
         stack.push(buffer[0])
@@ -400,5 +411,11 @@ define('DOUBLE', 0, ['DUP', '+'])
 define('DOUBLE2', 0, ['LIT', 2, '*'])
 
 # execute(Frame(compile(['LIT', 10, 'DOUBLE', 'PRINT'])))
-import sys
-execute(Frame(compile(sys.argv[1:] if len(sys.argv) > 1 else ['QUIT'])))
+args = sys.argv[1:]
+if len(args) > 0 and args[0] == '-f':
+    input_stream = open(args[1], 'r')
+    args = args[2:]
+    execute(Frame(compile(['QUIT'])))
+else:
+    input_stream = sys.stdin
+    execute(Frame(compile(args if len(args) > 0 else ['QUIT'])))
