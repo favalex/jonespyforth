@@ -362,8 +362,7 @@ def branch(frame):
     frame.position += n
 
 def lit(frame):
-    stack.push(frame.get_current_instruction())
-    frame.next()
+    stack.push(frame.next())
 
 def print_(frame):
     print stack.pop()
@@ -372,10 +371,6 @@ def emit(frame):
     sys.stdout.write(stack.pop())
     sys.stdout.flush()
 define('EMIT', 0, emit)
-
-def zequ(frame):
-    stack.push(1 if stack.pop() == 0 else 0)
-define('0=', 0, zequ)
 
 def char(frame):
     word(frame)
