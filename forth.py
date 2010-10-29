@@ -567,6 +567,9 @@ def execute(frame):
         try:
             instruction = frame.next()
         except IndexError:
+            instruction = exit
+
+        if instruction is exit:
             if vars['DEBUG']:
                 print ' '*indent, 'exiting frame', id(frame)
             indent -= 2
