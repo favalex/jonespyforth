@@ -466,9 +466,9 @@ define('RSP!', 0, rspstore)
 define('BRANCH', 0, branch)
 
 def zbranch(frame):
-    n = frame.get_current_instruction()
+    n = frame.next()
     if stack.pop() == 0:
-        frame.position += n
+        frame.position += n-1
 define('0BRANCH', 0, zbranch)
 
 define('LIT', 0, lit)
