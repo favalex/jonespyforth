@@ -16,18 +16,22 @@ class Stack(list):
     def dump(self, indent=0):
         top = len(self) - 1
         for n, value in enumerate(self):
-            print ' '*indent, '%d:' % (top-n), repr(value)
+            print ' '*indent, '%d:' % (top-n), to_string(value)
 
 def inverse(s):
     return '\033[4m' + s + '\033[24m'
 
-def to_string(x):
-    if isinstance(x, list):
-        return '[' + ', '.join(map(to_string, x)) + ']'
-    elif callable(x):
+def to_string(x, level=0):
+    if level > 5:
+        return '...'
+
+    try:
         return x.__name__
-    else:
-        return str(x)
+    except AttributeError:
+        if isinstance(x, list):
+            return '[' + ', '.join(map(lambda y: to_string(y, level+1), x)) + ']'
+        else:
+            return repr(x)
 
 class Frame(object):
     def __init__(self, definition):
@@ -140,6 +144,17 @@ defvar('HERE', [None]*100)
 defvar('LATEST', None)
 defvar('S0', 0)
 defvar('DEBUG', False)
+
+def dump_here():
+    print 'HERE',
+    here = vars['HERE']
+    for a in range(here.address):
+        x = here.memory[a]
+        if not x is None:
+            print to_string(x),
+        else:
+            break
+    print
 
 def dspfetch(frame):
     stack.push(len(stack)-1)
