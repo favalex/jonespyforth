@@ -88,7 +88,7 @@ def compile(definition):
 # flags
 IMMED = 0x80
 
-def define(name, flags, definition):
+def define(name, definition, flags=0):
     compiled = compile(definition)
     compiled.__name__ = name
     compiled.flags = flags
@@ -155,19 +155,19 @@ def defvar(name, value):
         value = Ref(value)
 
     vars[name] = value
-    define(name, 0, Var(name))
+    define(name, Var(name))
 
 def tdfa(frame):
     stack.push(Ref(stack.pop()))
-define('>DFA', 0, tdfa)
+define('>DFA', tdfa)
 
 def tffa(frame):
     stack.push(stack.pop().flags)
-define('>FFA', 0, tffa)
+define('>FFA', tffa)
 
 def execute_(frame):
     execute(Frame([stack.pop()]))
-define('EXECUTE', 0, execute_)
+define('EXECUTE', execute_)
 
 defvar('STATE', 0)
 defvar('BASE', 10)
@@ -189,20 +189,19 @@ def dump_here():
 
 def dspfetch(frame):
     stack.push(len(stack)-1)
-define('DSP@', 0, dspfetch)
+define('DSP@', dspfetch)
 
 def dspstore(frame):
     stack.set_top(stack.pop())
-
-define('DSP!', 0, dspstore)
+define('DSP!', dspstore)
 
 def rspfetch(frame):
     stack.push(len(return_stack)-1)
-define('RSP@', 0, rspfetch)
+define('RSP@', rspfetch)
 
 def rspstore(frame):
     return_stack.set_top(stack.pop())
-define('RSP!', 0, rspstore)
+define('RSP!', rspstore)
 
 def dup(frame):
     stack.push(stack.peek())
@@ -210,11 +209,11 @@ def dup(frame):
 def qdup(frame):
     if stack.peek() != 0:
         stack.push(stack.pop())
-define('?DUP', 0, qdup)
+define('?DUP', qdup)
 
 def over(frame):
     stack.push(stack[-2])
-define('OVER', 0, over)
+define('OVER', over)
 
 def rot(frame):
     # a b c -> b c a
@@ -224,7 +223,7 @@ def rot(frame):
     stack.push(b)
     stack.push(c)
     stack.push(a)
-define('ROT', 0, rot)
+define('ROT', rot)
 
 def nrot(frame):
     # a b c -> c a b
@@ -234,17 +233,17 @@ def nrot(frame):
     stack.push(c)
     stack.push(a)
     stack.push(b)
-define('-ROT', 0, nrot)
+define('-ROT', nrot)
 
 def twodrop(frame):
     stack.pop()
     stack.pop()
-define('2DROP', 0, twodrop)
+define('2DROP', twodrop)
 
 def twodup(frame):
     stack.push(stack[-2])
     stack.push(stack[-2])
-define('2DUP', 0, twodup)
+define('2DUP', twodup)
 
 def swap(frame):
     a = stack.pop()
@@ -254,42 +253,42 @@ def swap(frame):
 
 def drop(frame):
     stack.pop()
-define('DROP', 0, drop)
+define('DROP', drop)
 
 def fetch(frame):
     stack.push(stack.pop().fetch())
-define('@', 0, fetch)
-define('C@', 0, fetch)
+define('@', fetch)
+define('C@', fetch)
 
 def store(frame):
     var = stack.pop()
     var.store(stack.pop())
-define('!', 0, store)
-define('C!', 0, store)
+define('!', store)
+define('C!', store)
 
 def addstore(frame):
     var = stack.pop()
     var.store(var.fetch() + stack.pop())
-define('+!', 0, addstore)
+define('+!', addstore)
 
 def substore(frame):
     var = stack.pop()
     var.store(var.fetch() - stack.pop())
-define('-!', 0, substore)
+define('-!', substore)
 
 def comma(frame):
     here = vars['HERE']
     here.store(stack.pop())
     here.address += 1
-define(',', 0, comma)
+define(',', comma)
 
 def lbrac(frame):
     vars['STATE'] = 0
-define('[', IMMED, lbrac)
+define('[', lbrac, IMMED)
 
 def rbrac(frame):
     vars['STATE'] = 1
-define(']', 0, rbrac)
+define(']', rbrac)
 
 def create(frame):
     name = stack.pop()
@@ -298,11 +297,11 @@ def create(frame):
     words[name] = latest
     vars['HERE'] = Ref(latest)
     vars['LATEST'] = latest
-define('CREATE', 0, create)
+define('CREATE', create)
 
 def immediate(frame):
     vars['LATEST'].flags ^= IMMED
-define('IMMEDIATE', IMMED, immediate)
+define('IMMEDIATE', immediate, IMMED)
 
 def divmod_(frame):
     x = stack.pop()
@@ -312,15 +311,15 @@ def divmod_(frame):
 
 def tor(frame):
     return_stack.push(stack.pop())
-define('>R', 0, tor)
+define('>R', tor)
 
 def fromr(frame):
     stack.push(return_stack.pop())
-define('R>', 0, fromr)
+define('R>', fromr)
 
 def rdrop(frame):
     return_stack.pop()
-define('RDROP', 0, rdrop)
+define('RDROP', rdrop)
 
 def binary(operator):
     def word(frame):
@@ -370,12 +369,12 @@ def print_(frame):
 def emit(frame):
     sys.stdout.write(stack.pop())
     sys.stdout.flush()
-define('EMIT', 0, emit)
+define('EMIT', emit)
 
 def char(frame):
     word(frame)
     stack.push(stack.pop()[0])
-define('CHAR', 0, char)
+define('CHAR', char)
 
 def interpret(frame):
     word(frame)
@@ -461,99 +460,102 @@ def word(frame):
 
 import operator
 
-define('R0', 0, rz)
-define('RSP!', 0, rspstore)
-define('BRANCH', 0, branch)
+define('R0', rz)
+define('RSP!', rspstore)
+define('BRANCH', branch)
 
 def zbranch(frame):
     n = frame.next()
     if stack.pop() == 0:
         frame.position += n-1
-define('0BRANCH', 0, zbranch)
+define('0BRANCH', zbranch)
 
-define('LIT', 0, lit)
-define('DUP', 0, dup)
-define('SWAP', 0, swap)
-define('/MOD', 0, divmod_)
-define('*', 0, binary(operator.mul))
-define('+', 0, binary(operator.add))
-define('-', 0, binary(operator.sub))
-define('AND', 0, binary(operator.iand))
-define('OR', 0, binary(operator.ior))
-define('XOR', 0, binary(operator.ixor))
-define('=', 0, boolean(operator.eq))
-define('<>', 0, boolean(operator.ne))
-define('<', 0, boolean(operator.lt))
-define('>', 0, boolean(operator.gt))
-define('>=', 0, boolean(operator.ge))
-define('<=', 0, boolean(operator.le))
-define('0=', 0, zboolean(operator.eq))
-define('0<>', 0, zboolean(operator.ne))
-define('0<', 0, zboolean(operator.lt))
-define('0>', 0, zboolean(operator.gt))
-define('0>=', 0, zboolean(operator.ge))
-define('0<=', 0, zboolean(operator.le))
-define('PRINT', 0, print_)
-define('INTERPRET', 0, interpret)
-define('QUIT', 0, ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4])
-define('FIND', 0, find)
-define('KEY', 0, key)
-define('WORD', 0, word)
+define('LIT', lit)
+define('DUP', dup)
+define('SWAP', swap)
+define('/MOD', divmod_)
+define('*', binary(operator.mul))
+define('+', binary(operator.add))
+define('-', binary(operator.sub))
+define('AND', binary(operator.iand))
+define('OR', binary(operator.ior))
+define('XOR', binary(operator.ixor))
+define('=', boolean(operator.eq))
+define('<>', boolean(operator.ne))
+define('<', boolean(operator.lt))
+define('>', boolean(operator.gt))
+define('>=', boolean(operator.ge))
+define('<=', boolean(operator.le))
+define('0=', zboolean(operator.eq))
+define('0<>', zboolean(operator.ne))
+define('0<', zboolean(operator.lt))
+define('0>', zboolean(operator.gt))
+define('0>=', zboolean(operator.ge))
+define('0<=', zboolean(operator.le))
+define('PRINT', print_)
+define('INTERPRET', interpret)
+define('QUIT', ['R0', 'RSP!', 'INTERPRET', 'BRANCH', -4])
+define('FIND', find)
+define('KEY', key)
+define('WORD', word)
 
 def incr(frame):
     stack.push(1 + stack.pop())
-define('1+', 0, incr)
-define('4+', 0, incr)
+define('1+', incr)
+define('4+', incr)
 
 def decr(frame):
     stack.push(stack.pop() - 1)
-define('1-', 0, decr)
-define('4-', 0, decr)
+define('1-', decr)
+define('4-', decr)
 
 def invert(frame):
     stack.push(~stack.pop())
-define('INVERT', 0, invert)
+define('INVERT', invert)
 
 def nop(frame):
     pass
 
-define(':', 0, ['WORD', 'CREATE', ']'])
-define(';', IMMED, ['['])
+define(':', ['WORD', 'CREATE', ']'])
+define(';', ['['], IMMED)
 def tick(frame):
     stack.push(frame.next())
-define('\'', 0, tick)
-define('\'\'', 0, ['WORD', 'FIND', 'DROP'])
-define('>CFA', 0, nop)
+define('\'', tick)
+define('\'\'', ['WORD', 'FIND', 'DROP'])
 
-define('DOCOL', 0, nop)
+def tcfa(frame):
+    stack.push(words[stack.pop()])
+define('>CFA', nop)
+
+define('DOCOL', nop)
 
 def litstring(frame):
     n = frame.next()
     s = frame.next()
     stack.push(s)
     stack.push(n)
-define('LITSTRING', 0, litstring)
+define('LITSTRING', litstring)
 
 def tell(frame):
     n = stack.pop()
     s = stack.pop()
     sys.stdout.write(s)
-define('TELL', 0, tell)
+define('TELL', tell)
 
 def getenv(frame):
     import os
     stack.push(os.getenv(stack.pop()))
-define('GETENV', 0, getenv)
+define('GETENV', getenv)
 
 def random_(frame):
     import random
     stack.push(random.randint(0, 1000))
-define('RANDOM', 0, random_)
+define('RANDOM', random_)
 
 def pdb_(frame):
     import pdb
     pdb.set_trace()
-define('PDB', 0, pdb_)
+define('PDB', pdb_)
 
 def execute(frame):
     indent = 0
@@ -595,12 +597,14 @@ def execute(frame):
         else: # unquoted literal
             stack.push(instruction)
 
-define('DOUBLE', 0, ['DUP', '+'])
-define('DOUBLE2', 0, ['LIT', 2, '*'])
+define('DOUBLE', ['DUP', '+'])
+define('DOUBLE2', ['LIT', 2, '*'])
+
+define('SEE', ['WORD', 'FIND'])
 
 def exit(frame):
     pass
-define('EXIT', 0, exit)
+define('EXIT', exit)
 
 # execute(Frame(compile(['LIT', 10, 'DOUBLE', 'PRINT'])))
 args = sys.argv[1:]
