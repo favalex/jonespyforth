@@ -386,7 +386,7 @@ def interpret(frame):
         try:
             n = int(w, vars['BASE'])
         except ValueError:
-            print line, 'PARSE ERROR', repr(w)
+            print line, 'PARSE ERROR inside', to_string(vars['LATEST']), repr(w)
             # import pprint; pprint.pprint(words)
             import sys; sys.exit(1)
             return
@@ -412,7 +412,8 @@ def key(frame):
 
     if buffer is None:
         if input_stream.isatty():
-            sys.stdout.write('? ')
+            stack.dump()
+            sys.stdout.write('[%d] ? ' % vars['STATE'])
             sys.stdout.flush()
         buffer = input_stream.readline()
         line += 1
@@ -603,7 +604,12 @@ args = sys.argv[1:]
 if len(args) > 0 and args[0] == '-f':
     input_stream = open(args[1], 'r')
     args = args[2:]
-    execute(Frame(compile(['QUIT'])))
+    while True:
+        try:
+            execute(Frame(compile(['QUIT'])))
+        except Exception as e:
+            print line, 'inside', to_string(vars['LATEST']), e
+            import pdb; pdb.post_mortem()
 else:
     input_stream = sys.stdin
     execute(Frame(compile(args if len(args) > 0 else ['QUIT'])))
