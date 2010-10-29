@@ -67,17 +67,32 @@ return_stack = Stack()
 
 words = {}
 
+class List(list):
+    def __init__(self):
+        self.flags = 0
+
+    def __setitem__(self, i, x):
+        if i >= len(self):
+            self.extend([None]*(i - len(self) + 1))
+
+        super(List, self).__setitem__(i, x)
+
 def compile(definition):
     if callable(definition):
         return definition
     else:
-        return [words[n][1] if isinstance(n, basestring) else n for n in definition]
+        l = List()
+        l.extend([words[n] if isinstance(n, basestring) else n for n in definition])
+        return l
 
 # flags
 IMMED = 0x80
 
 def define(name, flags, definition):
-    words[name] = (flags, compile(definition))
+    compiled = compile(definition)
+    compiled.__name__ = name
+    compiled.flags = flags
+    words[name] = compiled
 
 class Var(object):
     def __init__(self, name):
@@ -93,12 +108,15 @@ class Var(object):
         vars[self.__name__] = value
 
     def fetch(self):
-        return vars[self.__name__]
+        value = vars[self.__name__]
+        if isinstance(value, Ref):
+            value = Ref(value.memory, value.address)
+        return value
 
 class Ref(object):
-    def __init__(self, memory):
+    def __init__(self, memory, address=0):
         self.memory = memory
-        self.address = 0
+        self.address = address
         self.__name__ = 'Ref'
 
     def __repr__(self):
@@ -106,6 +124,21 @@ class Ref(object):
 
     def __call__(self, frame):
         stack.push(self)
+
+    def __sub__(self, other):
+        assert isinstance(other, int) or (self.memory is other.memory)
+        if isinstance(other, int):
+            return self.address - other
+        else:
+            return self.address - other.address
+
+    def __add__(self, other):
+        assert isinstance(other, int)
+        return Ref(self.memory, self.address + other)
+
+    def __iand__(self, other):
+        assert isinstance(other, int)
+        return Ref(self.memory, self.address & other)
 
     def store(self, value):
         self.memory[self.address] = value
@@ -119,12 +152,10 @@ class Ref(object):
 vars = {}
 def defvar(name, value):
     if isinstance(value, list):
-        ref = Ref(value)
-        vars[name] = ref
-        define(name, 0, ref)
-    else:
-        vars[name] = value
-        define(name, 0, Var(name))
+        value = Ref(value)
+
+    vars[name] = value
+    define(name, 0, Var(name))
 
 def tdfa(frame):
     stack.push(Ref(stack.pop()))
@@ -140,7 +171,7 @@ define('EXECUTE', 0, execute_)
 
 defvar('STATE', 0)
 defvar('BASE', 10)
-defvar('HERE', [None]*100)
+defvar('HERE', [None]*500)
 defvar('LATEST', None)
 defvar('S0', 0)
 defvar('DEBUG', False)
@@ -261,20 +292,16 @@ def rbrac(frame):
 define(']', 0, rbrac)
 
 def create(frame):
-    vars['HERE'].address = 0
-    vars['LATEST'] = stack.pop()
-    words[vars['LATEST']] = (0, [])
+    name = stack.pop()
+    latest = List()
+    latest.__name__ = name
+    words[name] = latest
+    vars['HERE'] = Ref(latest)
+    vars['LATEST'] = latest
 define('CREATE', 0, create)
 
-def finish(frame):
-    flags, definition = words[vars['LATEST']]
-    words[vars['LATEST']] = (flags, vars['HERE'].copy())
-define('FINISH', 0, finish)
-
 def immediate(frame):
-    flags, definition = words[vars['LATEST']]
-    flags ^= IMMED
-    words[vars['LATEST']] = (flags, definition)
+    vars['LATEST'].flags ^= IMMED
 define('IMMEDIATE', IMMED, immediate)
 
 def divmod_(frame):
@@ -359,8 +386,8 @@ def interpret(frame):
     word(frame)
     w = stack.peek()
     find(frame)
-    if stack.peek() is None:
-        stack.pop()
+    definition = stack.pop()
+    if definition is None:
         try:
             n = int(w, vars['BASE'])
         except ValueError:
@@ -374,22 +401,14 @@ def interpret(frame):
             else:
                 stack.push(n)
                 comma(frame)
+    elif definition.flags & IMMED or vars['STATE'] == 0:
+        execute(Frame([definition]))
     else:
-        flags = stack.pop()
-        if flags & IMMED or vars['STATE'] == 0:
-            definition = stack.pop()
-            execute(Frame([definition]))
-        else:
-            comma(frame)
+        stack.push(definition)
+        comma(frame)
 
 def find(frame):
-    flags_definition = words.get(stack.pop())
-    if flags_definition:
-        flags, definition = flags_definition
-        stack.push(definition)
-        stack.push(flags)
-    else:
-        stack.push(None)
+    stack.push(words.get(stack.pop()))
 
 buffer = None
 
@@ -503,7 +522,7 @@ def nop(frame):
     pass
 
 define(':', 0, ['WORD', 'CREATE', ']'])
-define(';', IMMED, ['FINISH', '['])
+define(';', IMMED, ['['])
 def tick(frame):
     stack.push(frame.next())
 define('\'', 0, tick)
