@@ -101,7 +101,7 @@ class Var(object):
     def __repr__(self):
         return 'Variable ' + self.__name__
 
-    def __call__(self, frame):
+    def __call__(self):
         stack.push(self)
 
     def store(self, value):
@@ -122,7 +122,7 @@ class Ref(object):
     def __repr__(self):
         return 'Ref at address %s' % self.address
 
-    def __call__(self, frame):
+    def __call__(self):
         stack.push(self)
 
     def __sub__(self, other):
@@ -157,15 +157,15 @@ def defvar(name, value):
     vars[name] = value
     define(name, Var(name))
 
-def tdfa(frame):
+def tdfa():
     stack.push(Ref(stack.pop()))
 define('>DFA', tdfa)
 
-def tffa(frame):
+def tffa():
     stack.push(stack.pop().flags)
 define('>FFA', tffa)
 
-def execute_(frame):
+def execute_():
     execute(Frame([stack.pop()]))
 define('EXECUTE', execute_)
 
@@ -187,35 +187,35 @@ def dump_here():
             break
     print
 
-def dspfetch(frame):
+def dspfetch():
     stack.push(len(stack)-1)
 define('DSP@', dspfetch)
 
-def dspstore(frame):
+def dspstore():
     stack.set_top(stack.pop())
 define('DSP!', dspstore)
 
-def rspfetch(frame):
+def rspfetch():
     stack.push(len(return_stack)-1)
 define('RSP@', rspfetch)
 
-def rspstore(frame):
+def rspstore():
     return_stack.set_top(stack.pop())
 define('RSP!', rspstore)
 
-def dup(frame):
+def dup():
     stack.push(stack.peek())
 
-def qdup(frame):
+def qdup():
     if stack.peek() != 0:
         stack.push(stack.pop())
 define('?DUP', qdup)
 
-def over(frame):
+def over():
     stack.push(stack[-2])
 define('OVER', over)
 
-def rot(frame):
+def rot():
     # a b c -> b c a
     c = stack.pop()
     b = stack.pop()
@@ -225,7 +225,7 @@ def rot(frame):
     stack.push(a)
 define('ROT', rot)
 
-def nrot(frame):
+def nrot():
     # a b c -> c a b
     c = stack.pop()
     b = stack.pop()
@@ -235,62 +235,62 @@ def nrot(frame):
     stack.push(b)
 define('-ROT', nrot)
 
-def twodrop(frame):
+def twodrop():
     stack.pop()
     stack.pop()
 define('2DROP', twodrop)
 
-def twodup(frame):
+def twodup():
     stack.push(stack[-2])
     stack.push(stack[-2])
 define('2DUP', twodup)
 
-def swap(frame):
+def swap():
     a = stack.pop()
     b = stack.pop()
     stack.push(a)
     stack.push(b)
 
-def drop(frame):
+def drop():
     stack.pop()
 define('DROP', drop)
 
-def fetch(frame):
+def fetch():
     stack.push(stack.pop().fetch())
 define('@', fetch)
 define('C@', fetch)
 
-def store(frame):
+def store():
     var = stack.pop()
     var.store(stack.pop())
 define('!', store)
 define('C!', store)
 
-def addstore(frame):
+def addstore():
     var = stack.pop()
     var.store(var.fetch() + stack.pop())
 define('+!', addstore)
 
-def substore(frame):
+def substore():
     var = stack.pop()
     var.store(var.fetch() - stack.pop())
 define('-!', substore)
 
-def comma(frame):
+def comma():
     here = vars['HERE']
     here.store(stack.pop())
     here.address += 1
 define(',', comma)
 
-def lbrac(frame):
+def lbrac():
     vars['STATE'] = 0
 define('[', lbrac, IMMED)
 
-def rbrac(frame):
+def rbrac():
     vars['STATE'] = 1
 define(']', rbrac)
 
-def create(frame):
+def create():
     name = stack.pop()
     latest = List()
     latest.__name__ = name
@@ -299,30 +299,30 @@ def create(frame):
     vars['LATEST'] = latest
 define('CREATE', create)
 
-def immediate(frame):
+def immediate():
     vars['LATEST'].flags ^= IMMED
 define('IMMEDIATE', immediate, IMMED)
 
-def divmod_(frame):
+def divmod_():
     x = stack.pop()
     div, mod = divmod(stack.pop(), x)
     stack.push(mod)
     stack.push(div)
 
-def tor(frame):
+def tor():
     return_stack.push(stack.pop())
 define('>R', tor)
 
-def fromr(frame):
+def fromr():
     stack.push(return_stack.pop())
 define('R>', fromr)
 
-def rdrop(frame):
+def rdrop():
     return_stack.pop()
 define('RDROP', rdrop)
 
 def binary(operator):
-    def word(frame):
+    def word():
         x = stack.pop()
         stack.push(operator(stack.pop(), x))
 
@@ -330,7 +330,7 @@ def binary(operator):
     return word
 
 def boolean(operator):
-    def word(frame):
+    def word():
         x = stack.pop()
         stack.push(1 if operator(stack.pop(), x) else 0)
 
@@ -338,48 +338,48 @@ def boolean(operator):
     return word
 
 def zboolean(operator):
-    def word(frame):
+    def word():
         stack.push(1 if operator(stack.pop(), 0) else 0)
 
     word.__name__ = 'z' + operator.__name__
     return word
 
-def rspstore(frame):
+def rspstore():
     global return_stack
     old_stack = return_stack
     return_stack = Stack()
     return_stack.extend(old_stack[:stack.pop()])
 
-def rspfetch(frame):
+def rspfetch():
     stack.push(len(return_stack))
 
-def rz(frame):
+def rz():
     stack.push(0)
 
-def branch(frame):
-    n = frame.get_current_instruction()
-    frame.position += n
+def branch():
+    n = current_frame.get_current_instruction()
+    current_frame.position += n
 
-def lit(frame):
-    stack.push(frame.next())
+def lit():
+    stack.push(current_frame.next())
 
-def print_(frame):
+def print_():
     print stack.pop()
 
-def emit(frame):
     sys.stdout.write(stack.pop())
+def emit():
     sys.stdout.flush()
 define('EMIT', emit)
 
-def char(frame):
-    word(frame)
+def char():
+    word()
     stack.push(stack.pop()[0])
 define('CHAR', char)
 
-def interpret(frame):
-    word(frame)
+def interpret():
+    word()
     w = stack.peek()
-    find(frame)
+    find()
     definition = stack.pop()
     if definition is None:
         try:
@@ -394,19 +394,19 @@ def interpret(frame):
                 execute(Frame([lit, n]))
             else:
                 stack.push(n)
-                comma(frame)
+                comma()
     elif definition.flags & IMMED or vars['STATE'] == 0:
         execute(Frame([definition]))
     else:
         stack.push(definition)
-        comma(frame)
+        comma()
 
-def find(frame):
+def find():
     stack.push(words.get(stack.pop()))
 
 buffer = None
 
-def key(frame):
+def key():
     global buffer, input_stream, line
 
     if buffer is None:
@@ -433,11 +433,11 @@ def key(frame):
 
 line = 0
 
-def word(frame):
+def word():
     w = ''
     inside_comment = False
     while True:
-        key(frame)
+        key()
         k = stack.pop()
 
         if inside_comment:
@@ -464,10 +464,10 @@ define('R0', rz)
 define('RSP!', rspstore)
 define('BRANCH', branch)
 
-def zbranch(frame):
-    n = frame.next()
+def zbranch():
+    n = current_frame.next()
     if stack.pop() == 0:
-        frame.position += n-1
+        current_frame.position += n-1
 define('0BRANCH', zbranch)
 
 define('LIT', lit)
@@ -499,84 +499,89 @@ define('FIND', find)
 define('KEY', key)
 define('WORD', word)
 
-def incr(frame):
+def incr():
     stack.push(1 + stack.pop())
 define('1+', incr)
 define('4+', incr)
 
-def decr(frame):
+def decr():
     stack.push(stack.pop() - 1)
 define('1-', decr)
 define('4-', decr)
 
-def invert(frame):
+def invert():
     stack.push(~stack.pop())
 define('INVERT', invert)
 
-def nop(frame):
+def nop():
     pass
 
 define(':', ['WORD', 'CREATE', ']'])
 define(';', ['['], IMMED)
-def tick(frame):
-    stack.push(frame.next())
+def tick():
+    stack.push(current_frame.next())
 define('\'', tick)
 define('\'\'', ['WORD', 'FIND', 'DROP'])
 
-def tcfa(frame):
+def tcfa():
     stack.push(words[stack.pop()])
 define('>CFA', nop)
 
 define('DOCOL', nop)
 
-def litstring(frame):
-    n = frame.next()
-    s = frame.next()
+def litstring():
+    n = current_frame.next()
+    s = current_frame.next()
     stack.push(s)
     stack.push(n)
 define('LITSTRING', litstring)
 
-def tell(frame):
+def tell():
     n = stack.pop()
     s = stack.pop()
     sys.stdout.write(s)
 define('TELL', tell)
 
-def getenv(frame):
+def getenv():
     import os
     stack.push(os.getenv(stack.pop()))
 define('GETENV', getenv)
 
-def random_(frame):
+def random_():
     import random
     stack.push(random.randint(0, 1000))
 define('RANDOM', random_)
 
-def pdb_(frame):
+def pdb_():
     import pdb
     pdb.set_trace()
 define('PDB', pdb_)
 
+current_frame = None
+
 def execute(frame):
+    global current_frame
+
     indent = 0
+    current_frame = frame
     if vars['DEBUG']:
-        print 'entering frame', id(frame)
+        print 'entering frame', id(current_frame)
 
     while True:
         if vars['DEBUG']:
-            frame.dump(indent)
+            current_frame.dump(indent)
 
         try:
-            instruction = frame.next()
+            instruction = current_frame.next()
         except IndexError:
             instruction = exit
 
         if instruction is exit:
             if vars['DEBUG']:
-                print ' '*indent, 'exiting frame', id(frame)
+                print ' '*indent, 'exiting frame', id(current_frame)
             indent -= 2
             try:
-                frame = return_stack.pop()
+                current_frame = return_stack.pop()
             except IndexError:
                 if vars['DEBUG']:
                     stack.dump(indent)
@@ -585,15 +590,15 @@ def execute(frame):
             continue
 
         if callable(instruction):
-            instruction(frame)
+            instruction()
             if vars['DEBUG']:
                 stack.dump(indent)
         elif isinstance(instruction, list):
-            return_stack.push(frame)
-            frame = Frame(instruction)
+            return_stack.push(current_frame)
+            current_frame = Frame(instruction)
             indent += 2
             if vars['DEBUG']:
-                print ' '*indent, 'entering frame', id(frame)
+                print ' '*indent, 'entering frame', id(current_frame)
         else: # unquoted literal
             stack.push(instruction)
 
@@ -602,7 +607,7 @@ define('DOUBLE2', ['LIT', 2, '*'])
 
 define('SEE', ['WORD', 'FIND'])
 
-def exit(frame):
+def exit():
     pass
 define('EXIT', exit)
 
